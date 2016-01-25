@@ -1,0 +1,8 @@
+**Shine R Application**
+Source
+
+**Dataset**
+[Capstone Dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip)
+
+**Shinyapps.io R Application**
+https://teoria.shinyapps.io/ShiftKey/
