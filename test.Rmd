@@ -142,33 +142,4 @@ nextWords("If this isn't the cutest thing you've ever seen, then you must be")
 nextWords("The guy in front of me just bought a pound of bacon, a bouquet, and a case of")
 
 
-```
-```{r}
-pred = function(sentence){  
-
-  trigram = paste(tail(strsplit(sentence, " ")[[1]], 3), collapse=" ")
-  bigram = paste(tail(strsplit(sentence, " ")[[1]], 2), collapse=" ")
-  unigram = paste(tail(strsplit(sentence, " ")[[1]], 1), collapse=" ")
-
-  q = dfQuadgram[grep(paste("^",trigram,"\\W", sep=""),dfQuadgram$grams, perl=TRUE, value=FALSE),]
-  if(nrow(q) != 0){
-    s = strsplit((as.character(q[which.max(q$probability)][1,])), " ")[[1]]
-    return(tail(s,1))
-  }
-
-  t = dfTrigram[grep(paste("^",bigram,"\\W", sep=""),dfTrigram$grams, perl=TRUE, value=FALSE),]
-  if(nrow(t) != 0){
-    s = strsplit((as.character(t[which.max(t$probability)][1,])), " ")[[1]]
-    return(tail(s,1))
-  }
-
-  b = dfBigram[grep(paste("^",unigram,"\\W", sep=""),dfBigram$grams, perl=TRUE, value=FALSE),]
-  if(nrow(b) != 0){
-    s = strsplit((as.character(b[which.max(b$probability)][1,])), " ")[[1]]
-    return(tail(s,1))
-  }
-}
-
-pred("The guy in front of me just bought a pound of bacon, a bouquet, and a case of")
-```
-
+``` 
