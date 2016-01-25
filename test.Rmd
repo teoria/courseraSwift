@@ -1,0 +1,174 @@
+---
+title: "Untitled"
+author: "Rodrigo Carneiro"
+date: "January 24, 2016"
+output: html_document
+---
+
+```{r}
+library(quanteda)  
+
+my_dfm_2 <- readRDS("n2_2_100.rds")
+my_dfm_3 <- readRDS("n3_2_100.rds")
+my_dfm_4 <- readRDS("n4_2_100.rds")
+
+
+
+
+dt_gram <- function( dfm_gram ){
+        gram <- dfm_gram
+        total <- sum(gram)
+        limit <- .25 * total
+        data.table(
+                ngram = attributes(topfeatures(gram, limit))$names,
+                count = topfeatures(gram, limit),
+                freq_rel = topfeatures(gram, limit) / total
+        )
+}
+ 
+
+n_bigram    <-subset( dt_gram(my_dfm_2), count >2)
+n_trigram   <-subset( dt_gram(my_dfm_3), count >2)
+n_quadigram <-subset( dt_gram(my_dfm_4), count >2)
+
+rm(my_dfm_2)
+rm(my_dfm_3)
+rm(my_dfm_4)
+
+saveRDS(n_bigram, "ngram_2.rds")
+saveRDS(n_trigram, "ngram_3.rds")
+saveRDS(n_quadigram, "ngram_4.rds")
+  
+```
+
+```{r}
+
+library(data.table)
+ 
+  
+format(object.size(n_bigram), units="auto")
+format(object.size(n_trigram), units="auto")
+format(object.size(n_quadigram), units="auto")
+
+
+
+getWord <- function(palavras){
+        wds = palavras$ngram
+        previsao = sapply(strsplit(wds,split="_"), function(x)tail(x ,1) )
+        previsao
+}
+
+ 
+
+
+searchWord <- function(text_ngram, base,type){
+         
+        tokens<- tokenize(toLower(text_ngram), removePunct = TRUE, removeNumbers=TRUE, simplify=TRUE)
+        ngram_token <- ngrams(tokens, n = type)
+
+        texto <- paste("^",ngram_token , sep="") 
+        print( texto )
+        indices<-grep(texto,base$ngram, perl=TRUE, value=FALSE)
+        palavras <- head( base[indices,] , 3 ) 
+        
+        palavras
+}
+
+
+
+nextWords <- function(sentence){
+        
+        tri <- paste(tail(strsplit(sentence, " ")[[1]], 3), collapse=" ")
+        bi  <-paste(tail(strsplit(sentence, " ")[[1]], 2), collapse=" ")
+        uni <-paste(tail(strsplit(sentence, " ")[[1]], 1), collapse=" ")
+
+         
+        palavras <- searchWord( tri, n_quadigram, 3 )
+
+        if(nrow(palavras) != 0){
+                print(">>>> quad")
+            previsao = getWord(palavras)
+            return(previsao)
+        }
+        
+        
+        palavras <- searchWord( bi, n_trigram ,2)
+        
+        if(nrow(palavras) != 0){
+            print(">>>>> tri")
+            previsao = getWord(palavras)
+            return(previsao)
+        }
+        
+        
+         palavras <- searchWord( uni, n_bigram ,1)
+        
+        if(nrow(palavras) != 0){
+                print(">>>>> bi")
+            previsao = getWord(palavras)
+            return(previsao)
+        }
+          
+}
+
+
+
+
+nextWords("The guy in front of me just bought a pound of bacon, a bouquet, and a case of")
+
+   
+nextWords("The guy in front of me just bought a pound of")
+
+
+
+nextWords("You're the reason why I smile everyday. Can you follow me please? It would mean the")
+
+nextWords("Hey sunshine, can you follow me and make me the")
+
+nextWords("Very early observations on the Bills game: Offense still struggling but the")
+
+nextWords("Go on a romantic date at the")
+
+nextWords(" I'll dust them off and be on my")
+
+nextWord("Love that film and haven't seen it in quite some")
+
+nextWords("After the ice bucket challenge Louis will push his long wet hair out of his eyes with his little")
+
+nextWords("Be grateful for the good times and keep the faith during the" )
+
+nextWords("If this isn't the cutest thing you've ever seen, then you must be")
+
+nextWords("The guy in front of me just bought a pound of bacon, a bouquet, and a case of")
+
+
+```
+```{r}
+pred = function(sentence){  
+
+  trigram = paste(tail(strsplit(sentence, " ")[[1]], 3), collapse=" ")
+  bigram = paste(tail(strsplit(sentence, " ")[[1]], 2), collapse=" ")
+  unigram = paste(tail(strsplit(sentence, " ")[[1]], 1), collapse=" ")
+
+  q = dfQuadgram[grep(paste("^",trigram,"\\W", sep=""),dfQuadgram$grams, perl=TRUE, value=FALSE),]
+  if(nrow(q) != 0){
+    s = strsplit((as.character(q[which.max(q$probability)][1,])), " ")[[1]]
+    return(tail(s,1))
+  }
+
+  t = dfTrigram[grep(paste("^",bigram,"\\W", sep=""),dfTrigram$grams, perl=TRUE, value=FALSE),]
+  if(nrow(t) != 0){
+    s = strsplit((as.character(t[which.max(t$probability)][1,])), " ")[[1]]
+    return(tail(s,1))
+  }
+
+  b = dfBigram[grep(paste("^",unigram,"\\W", sep=""),dfBigram$grams, perl=TRUE, value=FALSE),]
+  if(nrow(b) != 0){
+    s = strsplit((as.character(b[which.max(b$probability)][1,])), " ")[[1]]
+    return(tail(s,1))
+  }
+}
+
+pred("The guy in front of me just bought a pound of bacon, a bouquet, and a case of")
+```
+

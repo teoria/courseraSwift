@@ -1,0 +1,195 @@
+---
+title: "Coursera Milestone Report - Word Prediction"
+author: "Rodrigo Carneiro"
+date: "December 29, 2015"
+output: html_document
+---
+
+#Capstone Project
+##Milestone
+This is a progress report concerning the development of an applicatin for word prediction as part of the Johns Hopkins University Data Science Specialization.
+
+* English based text files were downloaded from the course website. Each file contains data extracted from blogs, news articles and tweets. As the basic data exploration is performed, one can state:
+
+* Selecting which english terms (stopwords) to exclude in order to create the prediction module requires a complex analysis and its outcome is highly influential.
+
+* Each source file (blog, news and twitter) show a high number of unique words in a variety of combinations, thus, a deeper understanding of language semantics may come to order.
+
+* The resulting algorithm, as required, will provide a suggestions based on 2, 3 and 4 words combination.
+
+* Since the file delivereable is a web-based Shiny application, some of the combination and raking table may be reduced (decreasing efficiency) due to performatic concerns.
+
+Following sections of the report present basic Data Exploration.
+
+
+#Data
+The data used within this project and is a subset of files found on the HC Corpora project ([site here](http://corpora.heliohost.org/)).
+
+#File Structure
+At first, only english base text files are downloaded and used for creating the prediction algorithm. The files are:
+
+
+File | Description  
+--- | ---  
+en_US.blogs.txt | Blog entries written in US English. 
+en_US.news.txt | News related posts written in US English
+en_US.twitter.txt | Tweets written in English extracted from Twitter
+
+
+File | Size | lines | Words   
+--- | --- | --- | ---  
+en_US.blogs.txt | 200M | 899288 | 37334690
+en_US.news.txt | 196M | 1010242 | 34372720
+en_US.twitter.txt | 159M | 2360148 | 30374206
+
+
+
+
+#Get and clean data
+
+```{r eval=FALSE}
+ 
+
+bases <- c("data/final/en_US/en_US.blogs.txt",
+           "data/final/en_US/en_US.twitter.txt",
+           "data/final/en_US/en_US.news.txt"
+           )
+
+
+perc = 2/100
+set.seed(1982)
+
+#get sample data(1%) to create model
+getSampleData <- function(i){
+        arquivo <- file(i, "r")
+        data <- readLines(arquivo, skipNul=TRUE)
+        close(arquivo)
+        sample(data, round(length(data) * perc))
+}
+
+sampledData <- sapply(bases, getSampleData )
+
+bancosJuntos <- c(sampledData[1][[1]], sampledData[2][[1]], sampledData[3][[1]])
+writeLines(bancosJuntos, "data/sampled_2_100.txt")
+
+
+ 
+#tokenize
+library(quanteda) 
+
+tokens <- tokenize(toLower(bancosJuntos), removePunct = TRUE, removeNumbers=TRUE, simplify=TRUE)
+
+ngram_1 <- ngrams(tokens, n = 1)
+ngram_2 <- ngrams(tokens, n = 2)
+ngram_3 <- ngrams(tokens, n = 3)
+ngram_4 <- ngrams(tokens, n = 4)
+
+my_dfm_1 <- dfm(ngram_1, ignoredFeatures = stopwords("SMART"), stem = TRUE)
+my_dfm_2 <- dfm(ngram_2, ignoredFeatures = stopwords("SMART"), stem = TRUE)
+my_dfm_3 <- dfm(ngram_3, ignoredFeatures = stopwords("SMART"), stem = TRUE)
+my_dfm_4 <- dfm(ngram_4, ignoredFeatures = stopwords("SMART"), stem = TRUE)
+
+top_1 <-topfeatures(my_dfm_1, 20) 
+top_2 <-topfeatures(my_dfm_2, 20) 
+top_3 <-topfeatures(my_dfm_3, 20) 
+top_4 <-topfeatures(my_dfm_3, 20) 
+ 
+
+my_dfm_3[,1:5]
+summary(my_dfm_3)
+saveRDS(ngram_1, "ngram1.rds")
+saveRDS(ngram_2, "ngram2.rds")
+saveRDS(ngram_3, "ngram3.rds")
+saveRDS(ngram_4, "ngram4.rds")
+
+saveRDS(my_dfm_1, "n1_2_100.rds")
+saveRDS(my_dfm_2, "n2_2_100.rds")
+saveRDS(my_dfm_3, "n3_2_100.rds")
+saveRDS(my_dfm_4, "n4_2_100.rds")
+
+```
+ 
+```{r}
+library(quanteda) 
+my_dfm_1 <- readRDS("n1.rds")
+my_dfm_2 <- readRDS("n2.rds")
+my_dfm_3 <- readRDS("n3.rds")
+my_dfm_4 <- readRDS("n4.rds")
+ 
+top_1 <-topfeatures(my_dfm_1, 20) 
+top_2 <-topfeatures(my_dfm_2, 20) 
+top_3 <-topfeatures(my_dfm_3, 20) 
+top_4 <-topfeatures(my_dfm_3, 20) 
+ 
+
+library(data.table)
+head(colSums(my_dfm_2))
+unigrams <- my_dfm_1
+tot_unigrams <- sum(unigrams)
+
+unigrams_df <- data.table(
+        ngram = attributes(topfeatures(unigrams, 121772))$names,
+        count = topfeatures(unigrams, 121772),
+        freq_rel = topfeatures(unigrams, 121772) / tot_unigrams
+        )
+
+
+
+
+
+library(ggplot2)
+library(wordcloud)
+
+pal <- brewer.pal(6,"Dark2")
+pal <- pal[-(1)]
+   
+
+nomes <- names(top_1)
+df <- data.frame(nome=nomes, val=as.data.frame(top_1)$top_1 )
+
+top15 <- df[1:15,]
+ggplot(top15, aes(nome,val) )+geom_bar(stat = "identity")+ coord_flip()
+
+wordcloud(df$nome, df$val ,c(4,.3),2,150,TRUE,,.15,pal )
+
+#ngram 2  
+nomes <- names(top_2)
+df <- data.frame(nome=nomes, val=as.data.frame(top_2)$top_2 )
+
+top15 <- df[1:15,]
+ggplot(top15, aes(nome,val) )+geom_bar(stat = "identity")+ coord_flip()
+
+wordcloud(df$nome, df$val ,c(4,.3),2,150,TRUE,,.15,pal )
+
+#ngram 3  
+nomes <- names(top_3)
+df <- data.frame(nome=nomes, val=as.data.frame(top_3)$top_3 )
+
+top15 <- df[1:15,]
+ggplot(top15, aes(nome,val) )+geom_bar(stat = "identity")+ coord_flip()
+
+wordcloud(df$nome, df$val ,c(4,.3),2,150,TRUE,,.15,pal )
+
+#ngram 4 
+nomes <- names(top_4)
+df <- data.frame(nome=nomes, val=as.data.frame(top_4)$top_4 )
+
+top15 <- df[1:15,]
+ggplot(top15, aes(nome,val) )+geom_bar(stat = "identity")+ coord_flip()
+
+wordcloud(df$nome, df$val ,c(4,.3),2,150,TRUE,,.15,pal )
+
+
+
+
+  
+  
+```
+
+#next steps
+* The prediction model will take any 2, 3 or 4 words combination to suggest the following next word based on the sample data.
+
+* Frequency tables reached high number, thus, the idea is to reduce its size in order to meet performatic standards. Unfortunately, this may result on decreasing accuracy.
+
+* To the final model some algorithms and models will be tested (Good-Turing Smoothing and Kneser-Key Smoothing). 
+ 
